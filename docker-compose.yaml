@@ -1,0 +1,235 @@
+version: '3'
+
+ 
+
+ 
+
+services:
+
+ 
+
+  traefik:
+
+ 
+
+    image: traefik:v2.4
+
+ 
+
+    command:
+
+ 
+
+      - "--api.insecure=true"
+
+ 
+
+      - "--providers.docker=true"
+
+ 
+
+      - "--providers.docker.exposedbydefault=false"
+
+ 
+
+      - "--providers.docker.network=traefik_network"
+
+ 
+
+      - "--entrypoints.http.address=:80"
+
+ 
+
+    ports:
+
+ 
+
+      - "80:80"
+
+ 
+
+      - "8080:8080"
+
+ 
+
+    volumes:
+
+ 
+
+      - /var/run/docker.sock:/var/run/docker.sock
+
+ 
+
+    labels:
+
+ 
+
+      - "traefik.enable=true"
+
+ 
+
+      - "traefik.http.routers.traefik.rule=Host(`roshan.live`) && PathPrefix(`/db`)"
+
+ 
+
+      - "traefik.http.routers.traefik.entrypoints=http"
+
+ 
+
+      - "traefik.port=8080"
+
+ 
+
+    networks:
+
+ 
+
+      - traefik_network
+
+ 
+
+ 
+
+  wordpress:
+
+ 
+
+    image: wordpress
+
+ 
+
+    restart: always
+
+ 
+
+    environment:
+
+ 
+
+      WORDPRESS_DB_HOST: mysql
+
+ 
+
+      WORDPRESS_DB_USER: wpuser
+
+ 
+
+      WORDPRESS_DB_PASSWORD: wppassword
+
+ 
+
+      WORDPRESS_DB_NAME: wpdb
+
+ 
+
+    labels:
+
+ 
+
+      - "traefik.enable=true"
+
+ 
+
+      - "traefik.http.routers.wordpress.rule=Host(`roshan.live`)"
+
+ 
+
+      - "traefik.http.routers.wordpress.entrypoints=http"
+
+ 
+
+      - "traefik.port=80"
+
+ 
+
+    networks:
+
+ 
+
+      - traefik_network
+
+ 
+
+    volumes:
+
+ 
+
+      - wp-data:/var/www/html
+
+ 
+
+ 
+
+  mysql:
+
+ 
+
+    image: mysql:5.7
+
+ 
+
+    restart: always
+
+ 
+
+    environment:
+
+ 
+
+      MYSQL_ROOT_PASSWORD: rootpassword
+
+ 
+
+      MYSQL_DATABASE: wpdb
+
+ 
+
+      MYSQL_USER: wpuser
+
+ 
+
+      MYSQL_PASSWORD: wppassword
+
+ 
+
+    volumes:
+
+ 
+
+      - mysql_data:/var/lib/mysql
+
+ 
+
+    networks:
+
+ 
+
+      - traefik_network
+
+ 
+
+ 
+
+networks:
+
+ 
+
+  traefik_network:
+
+ 
+
+    external: true
+
+ 
+
+ 
+
+volumes:
+
+ 
+
+  wp-data:
+
+ 
+
+  mysql_data:
