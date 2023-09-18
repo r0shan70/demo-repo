@@ -1,0 +1,87 @@
+version: '3'
+
+services:
+  traefik:
+    image: traefik:v2.4
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik_network"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"  # Add HTTPS entrypoint
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=roshanofficial27@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=http"
+    ports:
+      - "80:80"
+      - "443:443"  # Map the HTTPS port
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt  # Mount a directory for Let's Encrypt data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`roshan.live`) && PathPrefix(`/db`)"
+      - "traefik.http.routers.traefik.entrypoints=http,https"  # Allow both HTTP and HTTPS
+      - "traefik.http.routers.traefik.tls.certresolver=myresolver"  # Use the certificate resolver
+      - "traefik.http.routers.traefik.middlewares=forwardauth"
+      - "traefik.port=8080"
+    networks:
+      - traefik_network
+
+  wordpress:
+    image: wordpress
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppassword
+      WORDPRESS_DB_NAME: wpdb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.rule=Host(`roshan.live`)"
+      - "traefik.http.routers.wordpress.entrypoints=http,https"  # Allow both HTTP and HTTPS
+      - "traefik.http.routers.wordpress.tls.certresolver=myresolver"  # Use the certificate resolver
+      - "traefik.http.routers.wordpress.middlewares=forwardauth"
+      - "traefik.port=80"
+    networks:
+      - traefik_network
+    volumes:
+      - wp-data:/var/www/html
+
+  forwardauth-service:
+    image: forwardauth-service:latest
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.forwardauth.rule=Host(`roshan.live`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.forwardauth.entrypoints=http,https"
+      - "traefik.http.routers.forwardauth.tls.certresolver=myresolver"
+    networks:
+      - traefik_network
+    ports:
+      - "5000:5000"  # Map container port 5000 to host port 5000
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wpdb
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - traefik_network
+
+networks:
+  traefik_network:
+    external: true
+
+volumes:
+  wp-data:
+  mysql_data:
