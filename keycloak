@@ -1,0 +1,13 @@
+docker run -d --name keycloak \
+  -p 8443:8443 \
+  -e KEYCLOAK_USER=admin \
+  -e KEYCLOAK_PASSWORD=admin \
+  -e KEYCLOAK_HTTPS=true \
+  -e KEYCLOAK_HTTPS_KEYSTORE=/etc/x509/https/keystore.jks \
+  -e KEYCLOAK_HTTPS_KEYSTORE_PASSWORD=changeit \
+  -e KEYCLOAK_HTTPS_KEY_PASSWORD=changeit \
+  -v /path/to/your_domain.crt:/etc/x509/https/tls.crt \
+  -v /path/to/your_domain.key:/etc/x509/https/tls.key \
+  -v /path/to/your_domain.ca.crt:/etc/x509/https/ca.crt \
+  --network traefik_network \
+  quay.io/keycloak/keycloak:15.0.2
